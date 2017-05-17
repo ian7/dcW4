@@ -1,6 +1,5 @@
 library(reshape2)
 
-
 loadSet <- function(setName,features){
   setFilename = paste0(directory,"/",setName,"/X_",setName,".txt")
   set <- read.table(setFilename)[features]
@@ -14,14 +13,11 @@ loadSet <- function(setName,features){
   set <- cbind(subjects, activities, set)
 }
 
-
-digestFeatures <- function( features) {
-  featuresOut = grep(".*std.*|.*mean.*", features[,2])
-  featuresOut.names = features[featuresOut,2]
-  featuresOut.names = gsub('-std', 'Std', featuresOut.names)
-  featuresOut.names = gsub('-mean', 'Mean', featuresOut.names)
-  featuresOut.names <- gsub('[-()]', '', featuresOut.names)
-  featuresOut
+digestFeatures <- function( allFeatures, selectedFeatures) {
+  featuresOut = features[selectedFeatures,2]
+  featuresOut = gsub('-std', 'Std', featuresOut)
+  featuresOut = gsub('-mean', 'Mean', featuresOut)
+  featuresOut <- gsub('[-()]', '', featuresOut)
 }
 
 directory="UCI HAR Dataset"
@@ -35,20 +31,17 @@ activityLabels<-read.table(activityFilename,colClasses = c("numeric","character"
 featuresFilename<-paste0(directory,"/features.txt")
 features<- read.table(featuresFilename,colClasses = c("numeric","character"))
 
-digestedFeatures = digestFeatures( features )
-test <- loadSet( "test",digestedFeatures)
-train <- loadSet( "train",digestedFeatures)
+selectedFeatures = grep(".*std().*|.*mean().*", features[,2])
+digestedFeatures = digestFeatures( features, selectedFeatures )
+test <- loadSet( "test",selectedFeatures)
+train <- loadSet( "train",selectedFeatures)
 
 completeData <- rbind(train, test)
-colnames(completeData) <- c("subject", "activity", digestedFeatures.names)
+colnames(completeData) <- c("subject", "activity", digestedFeatures)
 
-##  turn activities and subjects into factors
 completeData$activity <- factor(completeData$activity, levels = activityLabels[,1], labels = activityLabels[,2])
 completeData$subject <- as.factor(completeData$subject)
 
 meltedData <- melt(completeData, id = c("subject", "activity"))
 meanData <- dcast(meltedData, subject + activity ~ variable, mean)
 write.table(meanData, "tidy.txt", row.names = FALSE, quote = FALSE)
-
-
-
